@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 PROJECT MANAGER BOT - Полная интеграция Claude AI + Asana + Telegram
-Выполняет реальные задачи управления проектами через Claude AI
 """
 
 import os
@@ -18,7 +17,6 @@ import anthropic
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY')
 ASANA_TOKEN = os.environ.get('ASANA_TOKEN')
-
 TELEGRAM_GROUP_ID = int(os.environ.get('TELEGRAM_GROUP_ID', '-1003922826976'))
 YOUR_TELEGRAM_ID = int(os.environ.get('YOUR_TELEGRAM_ID', '123456789'))
 
@@ -70,33 +68,13 @@ class ClaudeAnalyzer:
 Вот данные о просроченных задачах:
 {tasks_data}
 
-ЗАДАЧА:
-1. Проанализируй просроченные задачи для каждого проекта
-2. Определи критичность (КРИТИЧНО/ВЫСОКАЯ/СРЕДНЯЯ)
-3. Предложи вопросы для ПМ
-4. Определи рекомендуемые действия
-
-ОТВЕТ в формате:
-🔴 [ПРОЕКТ]
-   ⚠️ КРИТИЧНОСТЬ: [УРОВЕНЬ]
-   📌 Просроченные: [СПИСОК]
-
-❓ ВОПРОСЫ для ПМ:
-   1. [ВОПРОС 1]
-   2. [ВОПРОС 2]
-   3. [ВОПРОС 3]
-
-💡 РЕКОМЕНДАЦИИ:
-   - [ДЕЙСТВИЕ 1]
-   - [ДЕЙСТВИЕ 2]
-
-Анализируй внимательно и дай полезные рекомендации."""
+Проанализируй просроченные задачи для каждого проекта и дай рекомендации."""
                     }
                 ]
             )
             return message.content[0].text
         except Exception as e:
-            return f"❌ Ошибка Claude: {str(e)}"
+            return f"Ошибка Claude: {str(e)}"
 
     async def analyze_sprint(self, tasks_data: str) -> str:
         """Анализирует задачи для спринт-планирования через Claude"""
@@ -107,43 +85,18 @@ class ClaudeAnalyzer:
                 messages=[
                     {
                         "role": "user",
-                        "content": f"""Вы - эксперт по управлению проектами и спринтам.
+                        "content": f"""Вы - эксперт по управлению проектами.
 
-Вот данные о текущих задачах и статусе проектов:
+Вот данные о текущих задачах:
 {tasks_data}
 
-ЗАДАЧА СПРИНТ-ПЛАНИРОВАНИЯ:
-1. Определи задачи для каждого проекта на следующую неделю
-2. Рекомендуй приоритеты
-3. Предложи критерии успеха для каждой задачи
-4. Определи потенциальные риски
-
-ОТВЕТ в формате:
-
-📋 СПРИНТ-ПЛАН НА НЕДЕЛЮ
-
-🎯 [ПРОЕКТ 1]
-   ПМ: [PM]
-
-   Задача 1: [НАЗВАНИЕ]
-   ⏰ Рекомендуемый срок: [ДАТА]
-   ✅ Критерий успеха: [КРИТЕРИЙ]
-   ⚠️ Риск: [РИСК или "Нет"]
-
-   Задача 2: [НАЗВАНИЕ]
-   ...
-
-⚡ ОБЩИЕ РЕКОМЕНДАЦИИ:
-   - [РЕКОМЕНДАЦИЯ 1]
-   - [РЕКОМЕНДАЦИЯ 2]
-
-Дай полезные и практичные рекомендации."""
+Определи задачи для каждого проекта на следующую неделю и дай рекомендации."""
                     }
                 ]
             )
             return message.content[0].text
         except Exception as e:
-            return f"❌ Ошибка Claude: {str(e)}"
+            return f"Ошибка Claude: {str(e)}"
 
 # ===== ASANA API =====
 
@@ -162,10 +115,10 @@ async def get_asana_tasks(project_id: str) -> List[Dict]:
                     data = await response.json()
                     return data.get('data', [])
                 else:
-                    print(f"❌ Asana API error: {response.status}")
+                    print(f"Asana API error: {response.status}")
                     return []
     except Exception as e:
-        print(f"❌ Ошибка Asana: {str(e)}")
+        print(f"Ошибка Asana: {str(e)}")
         return []
 
 async def get_all_projects_tasks() -> Dict:
@@ -188,35 +141,170 @@ async def get_all_projects_tasks() -> Dict:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /start"""
     await update.message.reply_text(
-        "🤖 **БОТ УПРАВЛЕНИЯ ПРОЕКТАМИ (Claude AI)**\n\n"
-        "✅ Интегрирован с Claude AI для анализа задач\n\n"
-        "📖 Доступные команды:\n"
-        "/report - Анализ просроченных задач (Claude AI)\n"
-        "/sprint - Планирование спринта (Claude AI)\n"
-        "/status - Статус всех проектов\n"
-        "/help - Справка",
-        parse_mode="Markdown"
+        "БОТ УПРАВЛЕНИЯ ПРОЕКТАМИ (Claude AI)\n\n"
+        "Доступные команды:\n"
+        "/report - Анализ просроченных задач\n"
+        "/sprint - Планирование спринта\n"
+        "/status - Статус проектов\n"
+        "/help - Справка"
     )
 
 async def handle_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Команда /report - анализ просроченных задач через Claude"""
+    """Команда /report"""
     user_id = update.effective_user.id
 
     if user_id != YOUR_TELEGRAM_ID:
-        await update.message.reply_text("❌ Только администратор может использовать эту команду")
+        await update.message.reply_text("Только администратор может использовать эту команду")
         return
 
+    await update.message.reply_text("Анализ просроченных задач запущен...")
+
+    try:
+        all_tasks = await get_all_projects_tasks()
+        tasks_summary = "СТАТУС ПРОЕКТОВ:\n\n"
+
+        for project_name, project_data in all_tasks.items():
+            tasks_summary += f"Проект: {project_data['name']}\n"
+            tasks_summary += f"Всего задач: {len(project_data['tasks'])}\n\n"
+
+        claude = ClaudeAnalyzer(CLAUDE_API_KEY)
+        analysis = await claude.analyze_overdue_tasks(tasks_summary)
+
+        full_report = f"АНАЛИЗ ПРОСРОЧЕННЫХ ЗАДАЧ\n\n{analysis}\n\nОжидаем ответы от ПМ"
+
+        await context.bot.send_message(
+            chat_id=TELEGRAM_GROUP_ID,
+            text=full_report
+        )
+
+        print("Отчет отправлен в группу")
+
+    except Exception as e:
+        error_msg = f"Ошибка: {str(e)}"
+        await context.bot.send_message(chat_id=TELEGRAM_GROUP_ID, text=error_msg)
+        print(f"Ошибка: {error_msg}")
+
+async def handle_sprint(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /sprint"""
+    user_id = update.effective_user.id
+
+    if user_id != YOUR_TELEGRAM_ID:
+        await update.message.reply_text("Только администратор может использовать эту команду")
+        return
+
+    await update.message.reply_text("Спринт-планирование запущено...")
+
+    try:
+        all_tasks = await get_all_projects_tasks()
+        tasks_summary = "ДАННЫЕ ДЛЯ ПЛАНИРОВАНИЯ:\n\n"
+
+        for project_name, project_data in all_tasks.items():
+            tasks_summary += f"{project_data['name']}\n"
+            tasks_summary += f"Задач: {len(project_data['tasks'])}\n\n"
+
+        claude = ClaudeAnalyzer(CLAUDE_API_KEY)
+        plan = await claude.analyze_sprint(tasks_summary)
+
+        full_plan = f"СПРИНТ-ПЛАН\n\n{plan}"
+
+        await context.bot.send_message(
+            chat_id=TELEGRAM_GROUP_ID,
+            text=full_plan
+        )
+
+        print("План спринта отправлен")
+
+    except Exception as e:
+        error_msg = f"Ошибка: {str(e)}"
+        await context.bot.send_message(chat_id=TELEGRAM_GROUP_ID, text=error_msg)
+        print(f"Ошибка: {error_msg}")
+
+async def handle_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /status"""
+    user_id = update.effective_user.id
+
+    if user_id != YOUR_TELEGRAM_ID:
+        await update.message.reply_text("Только администратор может использовать эту команду")
+        return
+
+    try:
+        all_tasks = await get_all_projects_tasks()
+        status_text = "СТАТУС ПРОЕКТОВ:\n\n"
+
+        for project_name, project_data in all_tasks.items():
+            total = len(project_data['tasks'])
+            completed = sum(1 for t in project_data['tasks'] if t.get('completed'))
+            percent = int((completed / total * 100) if total > 0 else 0)
+
+            status_text += f"{project_data['name']}: {percent}%\n"
+
+        await update.message.reply_text(status_text)
+
+    except Exception as e:
+        await update.message.reply_text(f"Ошибка: {str(e)}")
+
+async def handle_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /help"""
     await update.message.reply_text(
-        "✅ /report запущена!\n\n"
-        "🔄 Статус:\n"
-        "1️⃣ Загрузка данных из Asana...\n"
-        "2️⃣ Анализ Claude AI...\n"
-        "3️⃣ Отправка в группу...\n\n"
-        "⏳ Результаты будут через 30-60 секунд"
+        "/report - Анализ просроченных задач\n"
+        "/sprint - Планирование спринта\n"
+        "/status - Статус проектов\n"
+        "/help - Справка"
     )
 
-    await context.bot.send_message(
-        chat_id=TELEGRAM_GROUP_ID,
-        text=f"""
-🔍 **ЕЖЕДНЕВНАЯ ПРОВЕРКА ПРОСРОЧЕННЫХ ЗАДАЧ**
-📅 {datetime.now().strftime("%d
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка всех сообщений"""
+    if update.message.text and update.message.text.startswith('/'):
+        command = update.message.text[1:].split()[0]
+
+        if command == 'report':
+            await handle_report(update, context)
+        elif command == 'sprint':
+            await handle_sprint(update, context)
+        elif command == 'status':
+            await handle_status(update, context)
+        elif command == 'help':
+            await handle_help(update, context)
+        elif command == 'start':
+            await start(update, context)
+
+# ===== ГЛАВНАЯ ФУНКЦИЯ =====
+
+def main():
+    """Запустить бота"""
+    print("=" * 60)
+    print("БОТ УПРАВЛЕНИЯ ПРОЕКТАМИ (Claude AI)")
+    print("=" * 60)
+
+    if not TELEGRAM_TOKEN:
+        print("Ошибка: TELEGRAM_TOKEN не установлен!")
+        exit(1)
+
+    if not CLAUDE_API_KEY:
+        print("Ошибка: CLAUDE_API_KEY не установлен!")
+        exit(1)
+
+    print("\nКонфигурация: OK")
+    print(f"Telegram Group: {TELEGRAM_GROUP_ID}")
+
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("report", handle_report))
+    application.add_handler(CommandHandler("sprint", handle_sprint))
+    application.add_handler(CommandHandler("status", handle_status))
+    application.add_handler(CommandHandler("help", handle_help))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    print("\nБот запущен!")
+    print("=" * 60)
+
+    application.run_polling()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nБот остановлен")
+    except Exception as e:
+        print(f"\nОшибка: {str(e)}")
