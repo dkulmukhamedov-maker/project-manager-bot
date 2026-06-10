@@ -19,8 +19,8 @@ TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY')
 ASANA_TOKEN = os.environ.get('ASANA_TOKEN')
 
-TELEGRAM_GROUP_ID = -1003922826976
-YOUR_TELEGRAM_ID = 123456789  # ЗАМЕНИТЕ на ваш ID (найти у @userinfobot)
+TELEGRAM_GROUP_ID = int(os.environ.get('TELEGRAM_GROUP_ID', '-1003922826976'))
+YOUR_TELEGRAM_ID = int(os.environ.get('YOUR_TELEGRAM_ID', '123456789'))
 
 # Проекты Asana
 PROJECTS = {
