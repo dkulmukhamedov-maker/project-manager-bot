@@ -58,7 +58,7 @@ class ClaudeAnalyzer:
         """Анализирует просроченные задачи через Claude"""
         try:
             message = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-opus-20240229",
                 max_tokens=2000,
                 messages=[
                     {
